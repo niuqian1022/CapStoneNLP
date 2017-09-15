@@ -3,7 +3,7 @@ library(SnowballC)
 library(slam)
 library(readr)
 library(data.table)
-library(ggplot2)
+library(dplyr)
 # con = file("sub_twitter.txt", encoding = 'UTF-8')
 # sub_twitter <- read_lines(con)
 # con = file("sub_news.txt", encoding = 'UTF-8')
@@ -17,7 +17,7 @@ addTips = function(doc) {
 }
 CrtCleanVCorpus<-function(vector)
 {corpus<-VCorpus(VectorSource(vector), 
-                 readerControl = list(language = "en_US",
+                 readerControl = list(language = "lat",
                                       load = TRUE)    )
 corpus <- tm_map(corpus, removePunctuation)
 corpus<-tm_map(corpus, content_transformer(tolower))
@@ -29,15 +29,15 @@ corpus <- tm_map(corpus, content_transformer(addTips))
 
 #generate Corpus objective
 data<-CrtCleanVCorpus(sample[1:250000]) 
-testData<-CrtCleanVCorpus(sample[250001:260000]) #size of test sample maybe changed
+testData<-CrtCleanVCorpus(sample[250001:250100]) #size of test sample maybe changed
 #generate uni-gram 
-dtm = DocumentTermMatrix(data)
+dtm = DocumentTermMatrix(data, control=list(wordLengths=c(1,Inf)))
 dtm = dtm[slam::row_sums(dtm)>0,] #remove empty documents
 #control for constructing 2-grams tdm 
 BigramTokenizer<- function(x)
         {unlist(lapply(ngrams(words(x), 2), paste, collapse = " "), 
          use.names = FALSE) }
-ctrl = list (tokenize = BigramTokenizer)
+ctrl = list (tokenize = BigramTokenizer, wordLengths=c(1,Inf))
 bi_dtm = DocumentTermMatrix(data, control = ctrl)
 bi_dtm = bi_dtm[slam::row_sums(bi_dtm)>0,] #remove documents with zero bigrams
 #control for constructing 3-grams tdm 
@@ -97,7 +97,7 @@ getLastTerms = function(char, n) {
 }
 oneGramTable = df1
 colnames(oneGramTable) = c('firstTerms', 'freq')
-oneGramTable=oneGramTable[with(oneGramTable, order(firstTerms, -freq)), ]
+oneGramTable=oneGramTable[order(firstTerms, -freq) ]
 
 threeGramTable = df3
 threeGramTable$firstTerms = unlist(lapply(df3$term, getFirstTerms, n = 2))
@@ -116,6 +116,24 @@ fourGramTable$firstTerms = unlist(lapply(df4$term, getFirstTerms, n = 3))
 fourGramTable$lastTerm = unlist(lapply(df4$term, getLastTerms, n = 1))
 fourGramTable=fourGramTable[with(fourGramTable, order(firstTerms, -freq)), ]
 fourGramTable <- fourGramTable[, list(firstTerms, lastTerm, freq)]
+
+#remove the wired rows, should be fixed later
+oneGramTable = oneGramTable[6:nrow(oneGramTable)]
+twoGramTable = twoGramTable[6:nrow(twoGramTable)]
+threeGramTable = threeGramTable[4:nrow(threeGramTable)]
+fourGramTable = fourGramTable[4:nrow(fourGramTable)]
+
+write.csv(oneGramTable, 'oneGramTable.csv', row.names = F)
+write.csv(twoGramTable, 'twoGramTable.csv', row.names = F)
+write.csv(threeGramTable, 'threeGramTable.csv', row.names = F)
+write.csv(fourGramTable, 'fourGramTable.csv', row.names = F)
+
+
+#start here when model is fixed
+oneGramTable = fread("oneGramTable.csv")
+twoGramTable = fread("twoGramTable.csv")
+threeGramTable = fread("threeGramTable.csv")
+fourGramTable = fread("fourGramTable.csv")
 
 ##########################################################################################################
 # Now we make extended 3-gram table with Discount column and Remaining Probabilities.
@@ -164,10 +182,10 @@ fourGramTable_leftOverProb =
     fourGramTable[, .(leftoverprob =
                           calcLeftOverProb(freq, discount)), by=firstTerms]
 
-write.csv(oneGramTable, 'oneGramTable.csv', row.names = F)
-write.csv(twoGramTable, 'twoGramTable.csv', row.names = F)
-write.csv(threeGramTable, 'threeGramTable.csv', row.names = F)
-write.csv(fourGramTable, 'fourGramTable.csv', row.names = F)
+write.csv(oneGramTable, 'oneGramTable_Ratz.csv', row.names = F)
+write.csv(twoGramTable, 'twoGramTable_Ratz.csv', row.names = F)
+write.csv(threeGramTable, 'threeGramTable_Ratz.csv', row.names = F)
+write.csv(fourGramTable, 'fourGramTable_Ratz.csv', row.names = F)
 ########################################################################
 #Start here if nothing needs to be changed
 oneGramTable = fread("oneGramTable.csv")
