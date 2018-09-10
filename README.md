@@ -11,8 +11,8 @@ Click Result and have fun.
 A few second delay should be expected.
 
 Caveats:
-Discouting parameters should be optimized with cross validation
-Consider to remove some singleton from dictionary to speed up the algrithm
+Discouting parameters should be optimized with cross validation;
+Consider to remove some singleton from dictionary to speed up the algrithm;
 Choices of higher order N-gram models versus simpler discouting methods versus larger sample size
 
 
